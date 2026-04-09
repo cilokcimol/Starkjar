@@ -25,6 +25,8 @@ const nextConfig: NextConfig = {
       "@solana/web3.js": false,
       "@cartridge/controller": false,
       "@farcaster/mini-app-solana": false,
+      "ethers": false,
+      "@avnu/avnu-sdk": false,
     };
 
     return config;
