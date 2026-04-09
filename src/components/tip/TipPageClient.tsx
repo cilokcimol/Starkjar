@@ -50,17 +50,12 @@ export function TipPageClient({ creatorAddress, initialCreator }: Props) {
     setError("");
 
     try {
-      // Convert amount (in STRK) to u256 (18 decimals)
       const amountBigInt = BigInt(Math.round(parseFloat(amount) * 1e18));
       const u256Amount = uint256.bnToUint256(amountBigInt);
-
-      const tippingContract =
-        process.env.NEXT_PUBLIC_TIPPING_CONTRACT_ADDRESS ?? "";
+      const tippingContract = process.env.NEXT_PUBLIC_TIPPING_CONTRACT_ADDRESS ?? "";
 
       let calls;
-
       if (tippingContract.length > 5) {
-        // Encode message as ByteArray
         const msgBytes = new TextEncoder().encode(message.slice(0, 100));
         const msgPending = msgBytes.length > 0 ? msgBytes[msgBytes.length - 1] : 0;
         const fullWords = Math.floor(msgBytes.length / 31);
@@ -69,10 +64,7 @@ export function TipPageClient({ creatorAddress, initialCreator }: Props) {
           {
             contractAddress: STRK_ADDRESS,
             entrypoint: "approve",
-            calldata: CallData.compile({
-              spender: tippingContract,
-              amount: u256Amount,
-            }),
+            calldata: CallData.compile({ spender: tippingContract, amount: u256Amount }),
           },
           {
             contractAddress: tippingContract,
@@ -82,67 +74,39 @@ export function TipPageClient({ creatorAddress, initialCreator }: Props) {
               amount: u256Amount,
               message: {
                 data: Array.from({ length: fullWords }, (_, i) =>
-                  cairo.felt(
-                    BigInt(
-                      "0x" +
-                        Array.from(msgBytes.slice(i * 31, i * 31 + 31))
-                          .map((b) => b.toString(16).padStart(2, "0"))
-                          .join("")
-                    )
-                  )
+                  cairo.felt(BigInt("0x" + Array.from(msgBytes.slice(i * 31, i * 31 + 31))
+                    .map((b) => b.toString(16).padStart(2, "0")).join("")))
                 ),
-                pending_word:
-                  msgBytes.length > 0
-                    ? cairo.felt(BigInt(msgPending))
-                    : cairo.felt(BigInt(0)),
+                pending_word: msgBytes.length > 0 ? cairo.felt(BigInt(msgPending)) : cairo.felt(BigInt(0)),
                 pending_word_len: msgBytes.length % 31,
               },
             }),
           },
         ];
       } else {
-        // Fallback: direct STRK transfer
-        calls = [
-          {
-            contractAddress: STRK_ADDRESS,
-            entrypoint: "transfer",
-            calldata: CallData.compile({
-              recipient: creatorAddress,
-              amount: u256Amount,
-            }),
-          },
-        ];
+        calls = [{
+          contractAddress: STRK_ADDRESS,
+          entrypoint: "transfer",
+          calldata: CallData.compile({ recipient: creatorAddress, amount: u256Amount }),
+        }];
       }
 
       const tx = await account.execute(calls);
       await account.waitForTransaction(tx.transaction_hash);
 
-      // Record tip in DB
       await fetch("/api/tips", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          creatorAddress,
-          donorAddress: address,
-          amount,
-          message,
-          txHash: tx.transaction_hash,
-        }),
+        body: JSON.stringify({ creatorAddress, donorAddress: address, amount, message, txHash: tx.transaction_hash }),
       });
 
       setResult({ txHash: tx.transaction_hash, amount, message });
     } catch (err: unknown) {
-      const msg =
-        err instanceof Error ? err.message : "Transaction failed. Try again.";
+      const msg = err instanceof Error ? err.message : "Transaction failed.";
       setError(
-        msg.toLowerCase().includes("insufficient")
-          ? "Insufficient STRK balance to send this tip."
-          : msg.toLowerCase().includes("rejected") ||
-            msg.toLowerCase().includes("cancel")
-          ? "Transaction was cancelled."
-          : msg.length > 120
-          ? msg.slice(0, 120) + "..."
-          : msg
+        msg.toLowerCase().includes("insufficient") ? "Insufficient STRK balance." :
+        msg.toLowerCase().includes("rejected") || msg.toLowerCase().includes("cancel") ? "Transaction cancelled." :
+        msg.length > 120 ? msg.slice(0, 120) + "..." : msg
       );
     } finally {
       setSending(false);
@@ -154,61 +118,48 @@ export function TipPageClient({ creatorAddress, initialCreator }: Props) {
       <SuccessOverlay
         result={result}
         creatorName={creator?.name ?? shortAddress(creatorAddress)}
-        onReset={() => {
-          setResult(null);
-          setAmount("1");
-          setMessage("");
-        }}
+        onReset={() => { setResult(null); setAmount("1"); setMessage(""); }}
       />
     );
   }
 
   return (
-    <div className="min-h-[90vh] flex flex-col items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md">
-        <div className="card mb-4 text-center border-brand-500/10">
-          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-brand-500 to-accent-500 flex items-center justify-center mx-auto mb-4 shadow-glow">
-            <span className="text-white font-black text-2xl">
-              {(creator?.name ?? creatorAddress).slice(0, 1).toUpperCase()}
-            </span>
-          </div>
-          <h1 className="text-2xl font-black text-white">
+    <div className="min-h-[90vh] flex flex-col items-center justify-center px-4 py-16 bg-grid-fine pt-28">
+      <div className="w-full max-w-lg">
+
+        {/* Creator header */}
+        <div className="mb-6 pb-6" style={{ borderBottom: "1px solid var(--border)" }}>
+          <span className="label-amber mb-3 block">CREATOR / PROFILE</span>
+          <h1
+            className="font-display font-bold mb-2"
+            style={{ fontSize: "clamp(1.6rem, 4vw, 2.4rem)", letterSpacing: "-0.025em", color: "var(--text)" }}
+          >
             {creator?.name ?? shortAddress(creatorAddress)}
           </h1>
           {creator?.handle && (
-            <p className="text-slate-500 text-sm mt-0.5">@{creator.handle}</p>
+            <p className="font-mono text-sm mb-2" style={{ color: "var(--text-dim)" }}>
+              @{creator.handle}
+            </p>
           )}
           {creator?.bio && (
-            <p className="text-slate-400 text-sm mt-3 max-w-xs mx-auto leading-relaxed">
+            <p className="text-sm leading-relaxed" style={{ color: "var(--text-muted)", maxWidth: "44ch" }}>
               {creator.bio}
             </p>
           )}
-          <div className="flex items-center justify-center gap-4 mt-4">
-            <div className="status-badge-info">
-              <Heart className="w-3 h-3" />
-              {creator?.tipCount ?? 0} supporters
-            </div>
-            <div className="status-badge-success">
-              <Zap className="w-3 h-3" />
-              STRK tips
-            </div>
+          <div className="flex items-center gap-3 mt-4">
+            <span className="tag-amber"><Zap className="w-3 h-3" />STRK TIPS</span>
+            <span className="tag"><Heart className="w-3 h-3" />{creator?.tipCount ?? 0} supporters</span>
           </div>
         </div>
 
         {isSelf ? (
-          <div className="card border-amber-500/20 bg-amber-500/5 text-center">
-            <p className="text-amber-400 font-semibold text-sm">
-              This is your own profile page.
+          <div className="panel p-5">
+            <p className="text-sm font-semibold mb-1" style={{ color: "var(--ax)" }}>This is your own profile.</p>
+            <p className="text-sm mb-4" style={{ color: "var(--text-muted)" }}>
+              Share this URL with your community so they can tip you.
             </p>
-            <p className="text-slate-500 text-xs mt-1">
-              Share this URL with your community so they can support you.
-            </p>
-            <Link
-              href="/dashboard"
-              id="tip-self-back"
-              className="btn-primary mt-4 w-full rounded-xl inline-flex items-center justify-center gap-2"
-            >
-              Go to Dashboard
+            <Link href="/dashboard" id="tip-self-back" className="btn-primary px-6 py-2.5">
+              <span className="font-mono text-xs">GO TO DASHBOARD →</span>
             </Link>
           </div>
         ) : (
@@ -227,10 +178,10 @@ export function TipPageClient({ creatorAddress, initialCreator }: Props) {
           />
         )}
 
-        <div className="mt-6 text-center">
-          <p className="text-slate-600 text-xs flex items-center justify-center gap-1.5">
-            <Zap className="w-3 h-3 text-brand-500" />
-            Tips sent in STRK on Starknet Sepolia
+        <div className="mt-5 flex items-center gap-2">
+          <span className="w-1.5 h-1.5 rounded-full" style={{ background: "var(--ax)", opacity: 0.5 }} />
+          <p className="font-mono text-xs" style={{ color: "var(--text-dim)" }}>
+            STARKNET SEPOLIA / STRK / {shortAddress(creatorAddress)}
           </p>
         </div>
       </div>

@@ -1,28 +1,22 @@
 import { Navbar } from "@/components/layout/Navbar";
 
-export default function MainLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function MainLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-surface-950">
+    <div className="min-h-screen" style={{ background: "var(--bg)" }}>
       <Navbar />
-      <main className="pt-16">{children}</main>
-      <footer className="border-t border-white/5 py-8 mt-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 text-center">
-          <p className="text-slate-500 text-sm">
-            Built by{" "}
-            <span className="text-slate-400 font-medium">Vika Joestar</span>{" "}
-            for the Starkzap Developer Bounty Program.
-          </p>
-          <p className="text-slate-600 text-xs mt-1">
-            Powered by{" "}
-            <span className="text-brand-400">Starkzap SDK</span>
-            {" and "}
-            <span className="text-brand-400">AVNU Paymaster</span>
-            {" on Starknet Mainnet."}
-          </p>
+      <main>{children}</main>
+      <footer style={{ borderTop: "1px solid var(--border)", marginTop: "4rem" }}>
+        <div className="max-w-7xl mx-auto px-6 py-6 flex items-center justify-between">
+          <span className="label">STARKJAR / 2026 / OPEN SOURCE</span>
+          <a
+            href="https://github.com/cilokcimol/Starkjar"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="label hover:text-ax transition-colors"
+            style={{ textDecoration: "none" }}
+          >
+            GITHUB ↗
+          </a>
         </div>
       </footer>
     </div>

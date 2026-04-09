@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, Loader2, User } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 type Props = {
   address: string;
@@ -18,26 +18,17 @@ export function CreatorSetupModal({ address, onClose, onSaved }: Props) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) {
-      setError("Display name is required.");
-      return;
-    }
+    if (!name.trim()) { setError("Display name is required."); return; }
     setLoading(true);
     setError("");
     try {
       const res = await fetch("/api/creator", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          address,
-          name: name.trim(),
-          handle: handle.trim() || address.slice(0, 8),
-          bio: bio.trim(),
-        }),
+        body: JSON.stringify({ address, name: name.trim(), handle: handle.trim() || address.slice(0, 8), bio: bio.trim() }),
       });
-      if (!res.ok) throw new Error("Failed to save profile");
-      const data = await res.json();
-      onSaved(data);
+      if (!res.ok) throw new Error("Failed to save");
+      onSaved(await res.json());
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
@@ -47,96 +38,92 @@ export function CreatorSetupModal({ address, onClose, onSaved }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        className="absolute inset-0"
+        style={{ background: "rgba(9,9,26,0.88)", backdropFilter: "blur(8px)" }}
         onClick={onClose}
       />
-      <div className="relative w-full max-w-md card border-brand-500/20 animate-scale-in">
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-white/5 transition-all"
-          id="setup-modal-close"
-        >
-          <X className="w-4 h-4" />
-        </button>
 
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-accent-500 flex items-center justify-center">
-            <User className="w-5 h-5 text-white" />
-          </div>
+      {/* Panel */}
+      <div
+        className="relative w-full max-w-md panel-raised animate-appear"
+        style={{ padding: 0, overflow: "hidden" }}
+      >
+        {/* Header */}
+        <div
+          className="flex items-center justify-between px-6 py-4"
+          style={{ borderBottom: "1px solid var(--border)", background: "var(--surface)" }}
+        >
           <div>
-            <h2 className="text-xl font-bold text-white">Set up your profile</h2>
-            <p className="text-slate-500 text-xs">This is how fans will see you</p>
+            <span className="label-amber block mb-0.5">PROFILE / SETUP</span>
+            <p className="text-xs" style={{ color: "var(--text-muted)" }}>This is how fans will see you</p>
           </div>
+          <button
+            onClick={onClose}
+            id="setup-modal-close"
+            className="font-mono text-xs py-1 px-2 transition-colors"
+            style={{ color: "var(--text-dim)", border: "1px solid var(--border)", borderRadius: "2px" }}
+          >
+            ✕ CLOSE
+          </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="p-6 space-y-5">
           <div>
-            <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5 block">
-              Display Name *
-            </label>
+            <span className="label mb-2 block">DISPLAY NAME *</span>
             <input
               id="setup-name-input"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Vika Joestar"
-              className="input-field"
+              className="field"
               maxLength={50}
               required
             />
           </div>
 
           <div>
-            <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5 block">
-              Handle (optional)
-            </label>
+            <span className="label mb-2 block">HANDLE (OPTIONAL)</span>
             <input
               id="setup-handle-input"
               type="text"
               value={handle}
               onChange={(e) => setHandle(e.target.value.replace(/[^a-z0-9_]/gi, ""))}
               placeholder="e.g. vikajoestar"
-              className="input-field"
+              className="field"
               maxLength={30}
             />
           </div>
 
           <div>
-            <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5 block">
-              Bio (optional)
-            </label>
+            <span className="label mb-2 block">BIO (OPTIONAL)</span>
             <textarea
               id="setup-bio-input"
               value={bio}
               onChange={(e) => setBio(e.target.value)}
-              placeholder="Tell your fans who you are..."
-              className="input-field resize-none"
+              placeholder="Tell your fans who you are…"
+              className="field resize-none"
               rows={3}
               maxLength={200}
             />
           </div>
 
           {error && (
-            <p className="text-red-400 text-sm bg-red-400/10 px-3 py-2 rounded-lg border border-red-400/20">
+            <div
+              className="px-4 py-3 text-sm font-mono"
+              style={{ border: "1px solid rgba(239,68,68,0.3)", background: "rgba(239,68,68,0.06)", borderRadius: "2px", color: "#f87171" }}
+            >
               {error}
-            </p>
+            </div>
           )}
 
-          <button
-            id="setup-save-btn"
-            type="submit"
-            disabled={loading}
-            className="btn-primary w-full rounded-xl py-3"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              "Save Profile"
-            )}
+          <button id="setup-save-btn" type="submit" disabled={loading} className="btn-primary w-full py-3">
+            <span className="font-mono text-sm">
+              {loading ? <><Loader2 className="w-4 h-4 inline animate-spin mr-2" />SAVING…</> : "SAVE PROFILE →"}
+            </span>
           </button>
         </form>
       </div>
