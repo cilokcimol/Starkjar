@@ -41,7 +41,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     try {
       const { connect: gsConnect } = await import("@starknet-io/get-starknet");
 
-      // Shows Argent/Braavos/Keplr wallet picker modal
       const selectedWallet = await gsConnect({
         modalMode: "alwaysAsk",
         modalTheme: "dark",
@@ -52,8 +51,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const w = selectedWallet as any;
+      const w = selectedWallet as any; // eslint-disable-line @typescript-eslint/no-explicit-any
       const address: string =
         w.selectedAddress ?? w.account?.address ?? w.address ?? null;
 
@@ -63,8 +61,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
       setState({
         address,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        account: w.account as any,
+        account: w.account as any, // eslint-disable-line @typescript-eslint/no-explicit-any
         isConnecting: false,
         isConnected: true,
         walletName: w.name ?? w.id ?? "Wallet",
@@ -81,7 +78,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         walletRef.current.disconnect();
       }
     } catch {
-      // ignore
+      void 0;
     }
     walletRef.current = null;
     setState({

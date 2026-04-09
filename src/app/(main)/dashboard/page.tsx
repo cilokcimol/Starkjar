@@ -47,7 +47,6 @@ export default function DashboardPage() {
   useEffect(() => {
     if (isConnected && address) {
       fetchData();
-      // Fetch STRK balance via Alchemy
       fetch("https://starknet-sepolia.g.alchemy.com/starknet/version/rpc/v0_10/pAuTzan6E4kmLvnrI5EUh", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -71,7 +70,6 @@ export default function DashboardPage() {
 
   const totalReceived = tips.reduce((acc, t) => acc + parseFloat(t.amount || "0"), 0);
 
-  // ── Not connected ────────────────────────────────────────────────────────────
   if (!isConnected) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-6 bg-grid pt-14">
@@ -93,7 +91,7 @@ export default function DashboardPage() {
             className="btn-primary px-8 py-3"
           >
             <span className="font-mono text-sm">
-              {isConnecting ? <>CONNECTING<span className="cursor" /></> : "CONNECT WALLET →"}
+              {isConnecting ? <>CONNECTING<span className="cursor" /></> : "CONNECT WALLET"}
             </span>
           </button>
         </div>
@@ -101,7 +99,6 @@ export default function DashboardPage() {
     );
   }
 
-  // ── Connected ────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-grid-fine pt-14">
       {showSetup && (
@@ -113,8 +110,6 @@ export default function DashboardPage() {
       )}
 
       <div className="max-w-7xl mx-auto px-6 py-12">
-
-        {/* ── Header ── */}
         <div
           className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-12 pb-8"
           style={{ borderBottom: "1px solid var(--border)" }}
@@ -141,19 +136,18 @@ export default function DashboardPage() {
             </button>
             {profileUrl && (
               <Link href={profileUrl} target="_blank" id="dashboard-view-page-btn" className="btn-amber-outline text-xs py-2 px-4">
-                VIEW PAGE ↗
+                VIEW PAGE
               </Link>
             )}
           </div>
         </div>
 
-        {/* ── Stats Row ── */}
         <div
           className="grid grid-cols-2 lg:grid-cols-4 mb-12"
           style={{ borderTop: "1px solid var(--border)", borderLeft: "1px solid var(--border)" }}
         >
           {[
-            { label: "STRK BALANCE", value: strkBalance ?? "…" },
+            { label: "STRK BALANCE", value: strkBalance ?? "..." },
             { label: "TOTAL RECEIVED", value: totalReceived > 0 ? `${totalReceived.toFixed(2)} STRK` : "0 STRK" },
             { label: "TOTAL TIPS", value: tips.length.toString() },
             { label: "NETWORK", value: "SEPOLIA" },
@@ -171,7 +165,6 @@ export default function DashboardPage() {
           ))}
         </div>
 
-        {/* ── Tip Link ── */}
         <div className="mb-12">
           <span className="label mb-3 block">YOUR TIP LINK</span>
           <div className="flex items-center gap-3">
@@ -202,14 +195,13 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* ── Tips Table ── */}
         <div>
           <span className="label mb-4 block">INCOMING TIPS</span>
 
           {loadingTips ? (
             <div className="flex items-center gap-3 py-12" style={{ color: "var(--text-dim)" }}>
               <Loader2 className="w-4 h-4 animate-spin" />
-              <span className="font-mono text-xs">LOADING TRANSACTIONS…</span>
+              <span className="font-mono text-xs">LOADING TRANSACTIONS</span>
             </div>
           ) : tips.length === 0 ? (
             <div
@@ -223,7 +215,6 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div style={{ border: "1px solid var(--border)", borderRadius: "2px" }}>
-              {/* Table header */}
               <div
                 className="grid grid-cols-12 px-4 py-2.5 items-center"
                 style={{ borderBottom: "1px solid var(--border)", background: "var(--surface)" }}
@@ -248,7 +239,7 @@ export default function DashboardPage() {
                     +{tip.amount}
                   </span>
                   <span className="text-xs col-span-4 truncate" style={{ color: "var(--text-muted)", fontStyle: tip.message ? "italic" : "normal" }}>
-                    {tip.message ? `"${tip.message}"` : "—"}
+                    {tip.message ? `"${tip.message}"` : ""}
                   </span>
                   <span className="font-mono text-xs col-span-1" style={{ color: "var(--text-dim)" }}>
                     {new Date(tip.timestamp).toLocaleDateString("en", { month: "short", day: "numeric" })}

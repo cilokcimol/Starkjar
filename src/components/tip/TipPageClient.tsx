@@ -126,8 +126,6 @@ export function TipPageClient({ creatorAddress, initialCreator }: Props) {
   return (
     <div className="min-h-[90vh] flex flex-col items-center justify-center px-4 py-16 bg-grid-fine pt-28">
       <div className="w-full max-w-lg">
-
-        {/* Creator header */}
         <div className="mb-6 pb-6" style={{ borderBottom: "1px solid var(--border)" }}>
           <span className="label-amber mb-3 block">CREATOR / PROFILE</span>
           <h1
@@ -159,7 +157,7 @@ export function TipPageClient({ creatorAddress, initialCreator }: Props) {
               Share this URL with your community so they can tip you.
             </p>
             <Link href="/dashboard" id="tip-self-back" className="btn-primary px-6 py-2.5">
-              <span className="font-mono text-xs">GO TO DASHBOARD →</span>
+              <span className="font-mono text-xs">GO TO DASHBOARD</span>
             </Link>
           </div>
         ) : (

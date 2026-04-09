@@ -4,26 +4,22 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ─── Design Tokens ─────────────────────────────────────────────────────────── */
 :root {
   --font-display: "Space Grotesk", sans-serif;
   --font-sans:    "Space Grotesk", sans-serif;
   --font-mono:    "Space Mono", monospace;
 
-  /* Amber accent */
   --ax:        #d4900f;
   --ax-dim:    #b87208;
   --ax-faint:  rgba(212, 144, 15, 0.12);
   --ax-border: rgba(212, 144, 15, 0.25);
 
-  /* Dark surfaces */
   --bg:          #09091a;
   --surface:     #0e0f24;
   --surface-up:  #131427;
   --border:      rgba(255, 255, 255, 0.07);
   --border-dim:  rgba(255, 255, 255, 0.04);
 
-  /* Text */
   --text:        #edeef8;
   --text-muted:  #7a7f9e;
   --text-dim:    #3d4059;
@@ -42,7 +38,6 @@ body {
   overflow-x: hidden;
 }
 
-/* Scrollbar */
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: var(--bg); }
 ::-webkit-scrollbar-thumb { background: var(--border); }
@@ -50,7 +45,6 @@ body {
 
 ::selection { background: rgba(212, 144, 15, 0.25); color: var(--text); }
 
-/* ─── Grid Background ────────────────────────────────────────────────────────── */
 .bg-grid {
   background-image:
     linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
@@ -65,7 +59,6 @@ body {
   background-size: 20px 20px;
 }
 
-/* ─── Typography ─────────────────────────────────────────────────────────────── */
 @layer base {
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
@@ -74,10 +67,7 @@ body {
   }
 }
 
-/* ─── Components ─────────────────────────────────────────────────────────────── */
 @layer components {
-
-  /* Buttons */
   .btn-primary {
     @apply inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold;
     background: var(--ax);
@@ -109,7 +99,6 @@ body {
   }
   .btn-amber-outline:hover { background: var(--ax-faint); color: #e6a832; }
 
-  /* Panel / Surface */
   .panel {
     border: 1px solid var(--border);
     background: var(--surface);
@@ -122,10 +111,8 @@ body {
     border-radius: 2px;
   }
 
-  /* Rule / Divider */
   .rule { border: none; border-top: 1px solid var(--border); }
 
-  /* Label */
   .label {
     @apply text-xs font-mono uppercase tracking-widest;
     color: var(--text-dim);
@@ -138,7 +125,6 @@ body {
     letter-spacing: 0.14em;
   }
 
-  /* Input */
   .field {
     @apply w-full px-4 py-3 text-sm font-medium outline-none;
     background: var(--surface);
@@ -150,7 +136,6 @@ body {
   .field::placeholder { color: var(--text-dim); }
   .field:focus { border-color: var(--ax-border); }
 
-  /* Tag / Badge */
   .tag {
     @apply inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono;
     border: 1px solid var(--border);
@@ -166,7 +151,6 @@ body {
     background: var(--ax-faint);
   }
 
-  /* Cursor blink helper */
   .cursor::after {
     content: "█";
     animation: blink 1.2s step-end infinite;
@@ -174,18 +158,6 @@ body {
     margin-left: 2px;
   }
 
-  /* Horizontal rule with label */
-  .section-rule {
-    @apply flex items-center gap-4;
-  }
-  .section-rule::before,
-  .section-rule::after {
-    content: "";
-    flex: 1;
-    border-top: 1px solid var(--border);
-  }
-
-  /* Stat item — editorial style */
   .stat-item {
     @apply flex flex-col gap-1;
   }
@@ -200,7 +172,6 @@ body {
   }
 }
 
-/* ─── Utilities ──────────────────────────────────────────────────────────────── */
 @layer utilities {
   .font-display  { font-family: var(--font-display); }
   .font-mono-ax  { font-family: var(--font-mono); }
