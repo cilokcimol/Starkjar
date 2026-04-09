@@ -2,43 +2,36 @@
 
 **Created by Vika Joestar for the Starkzap Developer Bounty Program**
 
-A gasless tipping and donation platform built on Starknet Mainnet. Fans support
-creators by sending STRK tokens with zero gas fees, powered by the Starkzap SDK
-and AVNU Paymaster.
+A STRK tipping platform built on Starknet Sepolia. Creators share a public profile link — fans connect their Starknet wallet (Argent X, Braavos) and send on-chain STRK tips in seconds.
+
+Live demo: https://starkjar.netlify.app
 
 ---
 
 ## What It Does
 
-Starkjar is the Buy Me a Coffee of Starknet. A creator shares their profile URL
-and fans can send STRK tips directly to their wallet. Gas fees are completely
-sponsored through AVNU Paymaster via the Starkzap SDK, making the experience
-identical to using any Web2 payment tool.
+Starkjar is the Buy Me a Coffee of Starknet. A creator registers their wallet address and gets a public tip page at `/tip/0x...`. Anyone with a Starknet wallet can open that link, connect, pick an amount, and send STRK directly on-chain.
+
+Every tip is a real Starknet transaction — no custodian, no middleman, no redirects. The message field is stored as a Starknet event, permanently on-chain.
 
 ---
 
 ## Starkzap SDK Integration
 
-This project uses the Starkzap SDK at the core of its architecture:
+This project uses the Starkzap SDK for wallet connectivity and token operations:
 
-1. Onboarding
-   Users sign in with email or Google via Privy. The Starkzap OnboardStrategy.Privy
-   flow creates and deploys a Starknet smart account on Mainnet automatically.
-   No wallet extension or seed phrase is ever required.
+1. **Wallet Onboarding**
+   Users connect via `@starknet-io/get-starknet`, which presents the native Starknet wallet picker (Argent X, Braavos, Keplr, etc.). The returned wallet account is passed directly into Starkzap-compatible flows.
 
-2. Gasless Transactions
-   Every tip transaction uses feeMode: "sponsored" through the AVNU Paymaster.
-   The Starkzap SDK routes the transaction through our server-side paymaster proxy
-   so the donor only spends the STRK tip amount. Gas is completely abstracted away.
+2. **Token Setup**
+   `getPresets` and `Amount.parse` from the Starkzap SDK handle STRK token denomination and address resolution across Sepolia and Mainnet.
 
-3. Token Operations
-   The Starkzap Amount.parse and getPresets helpers handle STRK token denomination
-   and amount formatting throughout the codebase.
+3. **Transaction Execution**
+   Tips are sent as a multicall — `approve` on the STRK ERC-20 followed by `send_tip` on the deployed Tipping contract. The connected wallet signs and broadcasts the transaction natively.
 
-4. Server-side Signing
-   The PrivySigner integration uses our /api/wallet/sign endpoint to sign
-   transaction hashes server-side via Privy rawSign so no private key ever
-   appears on the frontend.
+4. **On-chain Tipping Contract**
+   A custom Cairo 2.x `Tipping` contract deployed on Starknet Sepolia handles the transfer logic and emits a `TipSent` event with the message.
+   Contract: `0x7a105e998b5e09b6a40b15a32bc1fc591f5748025d355e042259d659ab3c418`
 
 ---
 
@@ -48,31 +41,30 @@ This project uses the Starkzap SDK at the core of its architecture:
 src/
   app/
     (main)/
-      page.tsx              Landing page
-      layout.tsx            Shared layout with navbar
-      dashboard/page.tsx    Creator dashboard
-      tip/[address]/page.tsx  Public creator tip page
+      page.tsx                  Landing page
+      layout.tsx                Shared layout with navbar
+      dashboard/page.tsx        Creator dashboard (tips table, balance, link)
+      tip/[address]/page.tsx    Public creator tip page
     api/
-      wallet/starknet/      Privy wallet creation endpoint
-      wallet/sign/          Server-side transaction signing
-      paymaster/            AVNU Paymaster proxy (keeps API key server-side)
-      creator/              Creator profile CRUD
-      tips/                 Tip recording and retrieval
+      creator/                  Creator profile CRUD (name, handle, bio)
+      tips/                     Tip recording and retrieval
+      paymaster/                AVNU Paymaster proxy (API key stays server-side)
+      wallet/starknet/          Wallet resolution endpoint
+      wallet/sign/              Server-side signing endpoint
   components/
     providers/
-      PrivyProvider.tsx     Privy React Auth wrapper
-      WalletProvider.tsx    Global Starkzap wallet state context
-    landing/                Hero, How It Works, Features, CTA sections
-    dashboard/              Creator setup modal
-    tip/                    Tip form, success overlay, page client
-    layout/                 Navbar
+      WalletProvider.tsx        Global wallet state via get-starknet
+    landing/                    Hero, How It Works, Tech Spec, CTA sections
+    dashboard/                  Creator setup modal
+    tip/                        TipForm, SuccessOverlay, TipPageClient
+    layout/                     Navbar
   lib/
-    constants.ts            Starknet addresses, helpers
-    db.ts                   In-memory data store (replace with DB in production)
+    constants.ts                Starknet addresses, short address helper
+    db.ts                       In-memory store (replace with DB in production)
 
 contracts/
-  src/lib.cairo             Cairo tipping contract
-  Scarb.toml                Cairo project manifest
+  src/lib.cairo                 Cairo tipping contract (send_tip, TipSent event)
+  Scarb.toml                    Cairo project manifest
 ```
 
 ---
@@ -80,55 +72,55 @@ contracts/
 ## Quick Start
 
 ```bash
-cp .env.local.example .env.local
-```
-
-Fill in the following values in .env.local:
-
-```
-NEXT_PUBLIC_PRIVY_APP_ID     Create at https://dashboard.privy.io
-PRIVY_APP_ID                 Same as above
-PRIVY_APP_SECRET             From the Privy dashboard API keys section
-AVNU_PAYMASTER_API_KEY       Create at https://portal.avnu.fi
-NEXT_PUBLIC_APP_URL          http://localhost:3000 for local dev
-NEXT_PUBLIC_TIPPING_CONTRACT_ADDRESS   After deploying the Cairo contract
-```
-
-Then run:
-
-```bash
+cp .env.example .env.local
 npm install
 npm run dev
 ```
 
 Open http://localhost:3000
 
+Required environment variables (`.env.local`):
+
+```
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+NEXT_PUBLIC_TIPPING_CONTRACT_ADDRESS=0x7a105e998b5e09b6a40b15a32bc1fc591f5748025d355e042259d659ab3c418
+
+# Optional — only needed if using AVNU Paymaster proxy route
+AVNU_PAYMASTER_API_KEY=
+```
+
+No Privy account required. Wallet connection is handled entirely client-side via `@starknet-io/get-starknet`.
+
 ---
 
-## Cairo Contract Deployment
+## Cairo Contract
 
-See DEPLOYMENT.md for the complete step-by-step guide covering:
+The `Tipping` contract is deployed and verified on Starknet Sepolia:
 
-- Compiling with Scarb
-- Declaring the class on Mainnet with Starkli
-- Deploying the contract instance
-- Verifying on the Voyager explorer
+- **Address**: `0x7a105e998b5e09b6a40b15a32bc1fc591f5748025d355e042259d659ab3c418`
+- **Voyager**: https://sepolia.voyager.online/contract/0x7a105e998b5e09b6a40b15a32bc1fc591f5748025d355e042259d659ab3c418
+
+For deployment instructions see `DEPLOYMENT.md`.
 
 ---
 
 ## Tech Stack
 
-Next.js 15, React 19, TypeScript, Tailwind CSS
-Starkzap SDK with Privy strategy and AVNU Paymaster
-Cairo 2.x smart contract on Starknet Mainnet
-Privy for social login and server-side key management
-AVNU Paymaster for gas sponsorship
+| Layer | Technology |
+|---|---|
+| Framework | Next.js 15, React 19, TypeScript |
+| Styling | Tailwind CSS, vanilla CSS custom properties |
+| Fonts | Space Grotesk + Space Mono (Google Fonts) |
+| Wallet | `@starknet-io/get-starknet` v4 |
+| Starknet SDK | `starkzap` v2, `starknet.js` v6 |
+| Smart Contract | Cairo 2.x on Starknet Sepolia |
+| Deployment | Netlify (Next.js SSR plugin) |
 
 ---
 
 ## Bounty Requirements Met
 
-Meaningful Starkzap Integration: OnboardStrategy.Privy, feeMode sponsored, Amount.parse, getPresets, PrivySigner
-Web2 to On-chain UX: Email/Google login, no pop-ups, no gas fees, direct STRK tips
-Mainnet Ready: All configuration targets Starknet Mainnet. Cairo contract deployed via Starkli.
-Genuine Usefulness: Creator monetization solving real problems for the Starknet ecosystem.
+- **Meaningful Starkzap Integration**: `getPresets`, `Amount.parse`, wallet-compatible account interface
+- **Real On-chain UX**: Native wallet picker (Argent/Braavos), STRK multicall tip, on-chain message event
+- **Deployed Contract**: Tipping contract live on Starknet Sepolia, verifiable on Voyager
+- **Genuine Usefulness**: Creator monetization solving a real problem in the Starknet ecosystem
