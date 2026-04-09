@@ -23,8 +23,7 @@ export async function POST(req: NextRequest) {
 
     const data = await response.json();
     return NextResponse.json(data, { status: response.status });
-  } catch (err) {
-    console.error("Paymaster proxy error:", err);
+  } catch {
     return NextResponse.json(
       { error: "Paymaster request failed" },
       { status: 500 }
