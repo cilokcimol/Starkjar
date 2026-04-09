@@ -1,0 +1,38 @@
+# AI Agent internals
+.agent/
+
+# Dependencies
+node_modules/
+
+# Build output
+.next/
+out/
+dist/
+
+# Environment variables (SECRET - never commit)
+.env
+.env.local
+.env.production.local
+.env.development.local
+.env.test.local
+
+# Deployment scripts (used locally only)
+deploy.mjs
+deploy-raw.mjs
+deploy-alchemy.mjs
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts

@@ -1,0 +1,1 @@
+{"version":1,"contracts":[{"id":"am3421ahj39na","package_name":"starkjar_tipping","contract_name":"Tipping","module_path":"starkjar_tipping::Tipping","artifacts":{"sierra":"starkjar_tipping_Tipping.contract_class.json","casm":"starkjar_tipping_Tipping.compiled_contract_class.json"}}]}
