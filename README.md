@@ -24,7 +24,7 @@ This project integrates the Starkzap SDK at multiple layers:
 Users connect via @starknet-io/get-starknet, which presents the native Starknet wallet picker (Argent X, Braavos, Keplr). The returned account object is used with Starkzap-compatible wallet flows.
 
 **Token Setup**
-getPresets and Amount.parse from the Starkzap SDK handle STRK token denomination and address resolution across Sepolia and Mainnet.
+getPresets and Amount.parse from the Starkzap SDK handle STRK token denomination and address resolution on Starknet Sepolia.
 
 **Transaction Execution**
 Tips are sent as a multicall: approve on the STRK ERC-20 followed by send_tip on the deployed Tipping contract. The connected wallet signs and broadcasts the transaction natively.
