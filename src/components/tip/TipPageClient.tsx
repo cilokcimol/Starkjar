@@ -7,7 +7,10 @@ import { SuccessOverlay } from "@/components/tip/SuccessOverlay";
 import { shortAddress } from "@/lib/constants";
 import { Zap, Heart } from "lucide-react";
 import Link from "next/link";
-import type { Call } from "starknet";
+import { CallData, cairo, uint256 } from "starknet";
+
+const STRK_ADDRESS =
+  "0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d";
 
 type Creator = {
   address: string;
@@ -29,8 +32,7 @@ export type TipResult = {
 };
 
 export function TipPageClient({ creatorAddress, initialCreator }: Props) {
-  const { isConnected, isConnecting, connect, starkzapWallet, address } =
-    useWallet();
+  const { isConnected, isConnecting, connect, account, address } = useWallet();
 
   const [creator] = useState<Creator>(initialCreator);
   const [amount, setAmount] = useState("1");
@@ -43,70 +45,79 @@ export function TipPageClient({ creatorAddress, initialCreator }: Props) {
     !!address && address.toLowerCase() === creatorAddress.toLowerCase();
 
   const handleSendTip = useCallback(async () => {
-    if (!starkzapWallet || !amount || parseFloat(amount) <= 0) return;
+    if (!account || !amount || parseFloat(amount) <= 0) return;
     setSending(true);
     setError("");
 
     try {
-      const { Amount, getPresets } = await import("starkzap");
-      const { CallData, cairo } = await import("starknet");
-
-      const wallet = starkzapWallet;
-      const chainId = wallet.getChainId();
-      const presets = getPresets(chainId);
-      const STRK = presets.STRK;
-      if (!STRK) throw new Error("STRK token not found for this network");
-
-      const parsedAmount = Amount.parse(amount, STRK);
-      const rawAmount = parsedAmount.toBase();
-      const u256Amount = cairo.uint256(rawAmount);
+      // Convert amount (in STRK) to u256 (18 decimals)
+      const amountBigInt = BigInt(Math.round(parseFloat(amount) * 1e18));
+      const u256Amount = uint256.bnToUint256(amountBigInt);
 
       const tippingContract =
         process.env.NEXT_PUBLIC_TIPPING_CONTRACT_ADDRESS ?? "";
 
-      let calls: Call[];
+      let calls;
 
       if (tippingContract.length > 5) {
-        const approveCall: Call = {
-          contractAddress: STRK.address.toString(),
-          entrypoint: "approve",
-          calldata: CallData.compile({
-            spender: tippingContract,
-            amount: u256Amount,
-          }),
-        };
+        // Encode message as ByteArray
+        const msgBytes = new TextEncoder().encode(message.slice(0, 100));
+        const msgPending = msgBytes.length > 0 ? msgBytes[msgBytes.length - 1] : 0;
+        const fullWords = Math.floor(msgBytes.length / 31);
 
-        const messageBytes = Array.from(
-          new TextEncoder().encode(message.slice(0, 100))
-        ).map((b) => b.toString());
-
-        const tipCall: Call = {
-          contractAddress: tippingContract,
-          entrypoint: "send_tip",
-          calldata: CallData.compile({
-            creator: creatorAddress,
-            amount: u256Amount,
-            message_len: messageBytes.length.toString(),
-            message: messageBytes,
-          }),
-        };
-
-        calls = [approveCall, tipCall];
+        calls = [
+          {
+            contractAddress: STRK_ADDRESS,
+            entrypoint: "approve",
+            calldata: CallData.compile({
+              spender: tippingContract,
+              amount: u256Amount,
+            }),
+          },
+          {
+            contractAddress: tippingContract,
+            entrypoint: "send_tip",
+            calldata: CallData.compile({
+              creator: creatorAddress,
+              amount: u256Amount,
+              message: {
+                data: Array.from({ length: fullWords }, (_, i) =>
+                  cairo.felt(
+                    BigInt(
+                      "0x" +
+                        Array.from(msgBytes.slice(i * 31, i * 31 + 31))
+                          .map((b) => b.toString(16).padStart(2, "0"))
+                          .join("")
+                    )
+                  )
+                ),
+                pending_word:
+                  msgBytes.length > 0
+                    ? cairo.felt(BigInt(msgPending))
+                    : cairo.felt(BigInt(0)),
+                pending_word_len: msgBytes.length % 31,
+              },
+            }),
+          },
+        ];
       } else {
-        const transferCall: Call = {
-          contractAddress: STRK.address.toString(),
-          entrypoint: "transfer",
-          calldata: CallData.compile({
-            recipient: creatorAddress,
-            amount: u256Amount,
-          }),
-        };
-        calls = [transferCall];
+        // Fallback: direct STRK transfer
+        calls = [
+          {
+            contractAddress: STRK_ADDRESS,
+            entrypoint: "transfer",
+            calldata: CallData.compile({
+              recipient: creatorAddress,
+              amount: u256Amount,
+            }),
+          },
+        ];
       }
 
-      const tx = await wallet.execute(calls, { feeMode: "sponsored" });
-      await tx.wait();
+      const tx = await account.execute(calls);
+      await account.waitForTransaction(tx.transaction_hash);
 
+      // Record tip in DB
       await fetch("/api/tips", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -115,17 +126,20 @@ export function TipPageClient({ creatorAddress, initialCreator }: Props) {
           donorAddress: address,
           amount,
           message,
-          txHash: tx.hash,
+          txHash: tx.transaction_hash,
         }),
       });
 
-      setResult({ txHash: tx.hash, amount, message });
+      setResult({ txHash: tx.transaction_hash, amount, message });
     } catch (err: unknown) {
       const msg =
         err instanceof Error ? err.message : "Transaction failed. Try again.";
       setError(
         msg.toLowerCase().includes("insufficient")
           ? "Insufficient STRK balance to send this tip."
+          : msg.toLowerCase().includes("rejected") ||
+            msg.toLowerCase().includes("cancel")
+          ? "Transaction was cancelled."
           : msg.length > 120
           ? msg.slice(0, 120) + "..."
           : msg
@@ -133,7 +147,7 @@ export function TipPageClient({ creatorAddress, initialCreator }: Props) {
     } finally {
       setSending(false);
     }
-  }, [starkzapWallet, amount, message, creatorAddress, address]);
+  }, [account, amount, message, creatorAddress, address]);
 
   if (result) {
     return (
@@ -176,7 +190,7 @@ export function TipPageClient({ creatorAddress, initialCreator }: Props) {
             </div>
             <div className="status-badge-success">
               <Zap className="w-3 h-3" />
-              Gasless tips
+              STRK tips
             </div>
           </div>
         </div>
@@ -216,7 +230,7 @@ export function TipPageClient({ creatorAddress, initialCreator }: Props) {
         <div className="mt-6 text-center">
           <p className="text-slate-600 text-xs flex items-center justify-center gap-1.5">
             <Zap className="w-3 h-3 text-brand-500" />
-            Gas fees sponsored by AVNU Paymaster via Starkzap SDK
+            Tips sent in STRK on Starknet Sepolia
           </p>
         </div>
       </div>

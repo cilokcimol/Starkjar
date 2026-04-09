@@ -20,8 +20,8 @@ import type { Tip } from "@/lib/db";
 import { CreatorSetupModal } from "@/components/dashboard/CreatorSetupModal";
 
 export default function DashboardPage() {
-  const { isConnected, address, strkBalance, connect, isConnecting } =
-    useWallet();
+  const { isConnected, address, connect, isConnecting } = useWallet();
+  const [strkBalance, setStrkBalance] = useState<string | null>(null);
   const [tips, setTips] = useState<Tip[]>([]);
   const [creator, setCreator] = useState<{
     name: string;
@@ -67,6 +67,38 @@ export default function DashboardPage() {
   useEffect(() => {
     if (isConnected && address) {
       fetchData();
+      // Fetch STRK balance
+      fetch(
+        `https://starknet-sepolia.g.alchemy.com/starknet/version/rpc/v0_10/pAuTzan6E4kmLvnrI5EUh`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            method: "starknet_call",
+            params: [
+              {
+                contract_address:
+                  "0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d",
+                entry_point_selector:
+                  "0x2e4263afad30923c891518314c3c95dbe830a16874e8abc5777a9a20b54c76e",
+                calldata: [address],
+              },
+              "latest",
+            ],
+            id: 1,
+          }),
+        }
+      )
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.result?.[0]) {
+            const raw = BigInt(data.result[0]);
+            const formatted = (Number(raw) / 1e18).toFixed(4);
+            setStrkBalance(`${formatted} STRK`);
+          }
+        })
+        .catch(() => setStrkBalance("-- STRK"));
     }
   }, [isConnected, address, fetchData]);
 
@@ -88,8 +120,8 @@ export default function DashboardPage() {
           Connect to access your dashboard
         </h1>
         <p className="text-slate-400 mb-8 max-w-md">
-          Sign in with email or Google. Your Starknet wallet is created
-          automatically. No seed phrases needed.
+          Connect your Starknet wallet (Argent, Braavos, or any compatible
+          wallet) to access your creator dashboard.
         </p>
         <button
           id="dashboard-connect-btn"

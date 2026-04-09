@@ -8,148 +8,93 @@ import {
   useRef,
   type ReactNode,
 } from "react";
-import { usePrivy } from "@privy-io/react-auth";
-import type { WalletInterface } from "starkzap";
+import type { AccountInterface } from "starknet";
 
 export type WalletState = {
   address: string | null;
-  starkzapWallet: WalletInterface | null;
+  account: AccountInterface | null;
   isConnecting: boolean;
   isConnected: boolean;
-  strkBalance: string | null;
+  walletName: string | null;
 };
 
 type WalletContextType = WalletState & {
   connect: () => Promise<void>;
   disconnect: () => void;
-  refreshBalance: () => Promise<void>;
 };
 
 const WalletContext = createContext<WalletContextType | null>(null);
 
 export function WalletProvider({ children }: { children: ReactNode }) {
-  const { ready, authenticated, login, logout, getAccessToken, user } =
-    usePrivy();
-
   const [state, setState] = useState<WalletState>({
     address: null,
-    starkzapWallet: null,
+    account: null,
     isConnecting: false,
     isConnected: false,
-    strkBalance: null,
+    walletName: null,
   });
 
-  const walletRef = useRef<WalletInterface | null>(null);
-
-  const refreshBalance = useCallback(async () => {
-    if (!walletRef.current) return;
-    try {
-      const { getPresets } = await import("starkzap");
-      const wallet = walletRef.current;
-      const chainId = wallet.getChainId();
-      const presets = getPresets(chainId);
-      const STRK = presets["STRK"] ?? presets["strk"];
-      if (!STRK) return;
-      const balance = await wallet.balanceOf(STRK);
-      setState((prev) => ({
-        ...prev,
-        strkBalance: balance.toFormatted(true),
-      }));
-    } catch {
-      setState((prev) => ({ ...prev, strkBalance: "0 STRK" }));
-    }
-  }, []);
+  const walletRef = useRef<{ disconnect?: () => void } | null>(null);
 
   const connect = useCallback(async () => {
-    if (!ready) return;
-
-    if (!authenticated) {
-      login();
-      return;
-    }
-
     setState((prev) => ({ ...prev, isConnecting: true }));
-
     try {
-      const accessToken = await getAccessToken();
-      const appUrl =
-        typeof window !== "undefined"
-          ? window.location.origin
-          : (process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000");
+      const { connect: gsConnect } = await import("@starknet-io/get-starknet");
 
-      const { StarkZap, OnboardStrategy, accountPresets } = await import(
-        "starkzap"
-      );
-
-      const sdk = new StarkZap({
-        network: "sepolia",
-        rpcUrl: "https://api.cartridge.gg/x/starknet/sepolia",
-        paymaster: {
-          nodeUrl: `${appUrl}/api/paymaster`,
-        },
+      // Shows Argent/Braavos/Keplr wallet picker modal
+      const selectedWallet = await gsConnect({
+        modalMode: "alwaysAsk",
+        modalTheme: "dark",
       });
 
-      const result = await sdk.onboard({
-        strategy: OnboardStrategy.Privy,
-        accountPreset: accountPresets.argentXV050,
-        feeMode: "sponsored",
-        deploy: "if_needed",
-        privy: {
-          resolve: async () => {
-            const res = await fetch("/api/wallet/starknet", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${accessToken}`,
-              },
-              body: JSON.stringify({ userId: user?.id }),
-            });
-            if (!res.ok) throw new Error("Failed to resolve Privy wallet");
-            const data = await res.json();
-            return {
-              walletId: data.walletId,
-              publicKey: data.publicKey,
-              serverUrl: `${appUrl}/api/wallet/sign`,
-            };
-          },
-        },
-      });
+      if (!selectedWallet) {
+        setState((prev) => ({ ...prev, isConnecting: false }));
+        return;
+      }
 
-      const wallet = result.wallet;
-      walletRef.current = wallet;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const w = selectedWallet as any;
+      const address: string =
+        w.selectedAddress ?? w.account?.address ?? w.address ?? null;
 
-      const address = wallet.address.toString();
+      if (!address) throw new Error("No address returned from wallet");
+
+      walletRef.current = w;
+
       setState({
         address,
-        starkzapWallet: wallet,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        account: w.account as any,
         isConnecting: false,
         isConnected: true,
-        strkBalance: null,
+        walletName: w.name ?? w.id ?? "Wallet",
       });
-
-      refreshBalance();
     } catch (err) {
       console.error("Wallet connect error:", err);
       setState((prev) => ({ ...prev, isConnecting: false }));
     }
-  }, [ready, authenticated, login, getAccessToken, user?.id, refreshBalance]);
+  }, []);
 
   const disconnect = useCallback(() => {
+    try {
+      if (walletRef.current?.disconnect) {
+        walletRef.current.disconnect();
+      }
+    } catch {
+      // ignore
+    }
     walletRef.current = null;
     setState({
       address: null,
-      starkzapWallet: null,
+      account: null,
       isConnecting: false,
       isConnected: false,
-      strkBalance: null,
+      walletName: null,
     });
-    logout();
-  }, [logout]);
+  }, []);
 
   return (
-    <WalletContext.Provider
-      value={{ ...state, connect, disconnect, refreshBalance }}
-    >
+    <WalletContext.Provider value={{ ...state, connect, disconnect }}>
       {children}
     </WalletContext.Provider>
   );

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { PrivyClientProvider } from "@/components/providers/PrivyProvider";
 import { WalletProvider } from "@/components/providers/WalletProvider";
 
 const inter = Inter({
@@ -11,32 +10,32 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Starkjar - Gasless Tips for Creators on Starknet",
+  title: "Starkjar - Tips for Creators on Starknet",
   description:
-    "Support your favorite creators with STRK tokens on Starknet. Zero gas fees required. Powered by Starkzap SDK and AVNU Paymaster for a seamless Web2-like experience.",
+    "Support your favorite creators with STRK tokens on Starknet. Connect with Argent, Braavos, or any Starknet wallet.",
   keywords: [
     "starknet",
     "creator tips",
-    "gasless",
     "web3",
     "STRK",
     "buy me a coffee",
     "crypto tips",
-    "starkzap",
+    "argent",
+    "braavos",
   ],
   metadataBase: new URL(
-    process.env.NEXT_PUBLIC_APP_URL ?? "https://starkjar.app"
+    process.env.NEXT_PUBLIC_APP_URL ?? "https://starkjar.netlify.app"
   ),
   openGraph: {
-    title: "Starkjar - Gasless Tips for Creators on Starknet",
+    title: "Starkjar - Tips for Creators on Starknet",
     description:
-      "Support creators with STRK tokens. Zero gas fees. Built on Starknet.",
+      "Support creators with STRK tokens. Connect with Argent, Braavos, or any Starknet wallet.",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Starkjar - Gasless Tips for Creators on Starknet",
-    description: "Support creators with STRK tokens. Zero gas fees.",
+    title: "Starkjar - Tips for Creators on Starknet",
+    description: "Support creators with STRK tokens on Starknet.",
   },
 };
 
@@ -48,10 +47,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.variable} suppressHydrationWarning>
       <body suppressHydrationWarning>
-        <PrivyClientProvider>
-          <WalletProvider>{children}</WalletProvider>
-        </PrivyClientProvider>
+        <WalletProvider>{children}</WalletProvider>
       </body>
     </html>
   );
 }
+
